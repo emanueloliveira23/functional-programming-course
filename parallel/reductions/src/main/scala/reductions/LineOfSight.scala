@@ -4,7 +4,7 @@ import org.scalameter._
 import common._
 
 object LineOfSightRunner {
-  
+
   val standardConfig = config(
     Key.exec.minWarmupRuns -> 40,
     Key.exec.maxWarmupRuns -> 80,
@@ -84,33 +84,34 @@ object LineOfSight {
    *  given the `startingAngle`.
    */
   def downsweepSequential(input: Array[Float], output: Array[Float],
-    startingAngle: Float, from: Int, until: Int): Unit = {
-    output(from) = math.max(startingAngle, input(from) / from)
-    for ( i <- from + 1 until until)
-      output(i) = math.max(input(i) / i, output(i - 1))
+                          startingAngle: Float, from: Int, until: Int): Unit = {
+    if (from < until) {
+      output(from) = math.max(startingAngle, input(from) / from)
+      for ( i <- from + 1 until until)
+        output(i) = math.max(input(i) / i, output(i - 1))
+    }
   }
 
   /** Pushes the maximum angle in the prefix of the array to each leaf of the
    *  reduction `tree` in parallel, and then calls `downsweepTraverse` to write
    *  the `output` angles.
    */
-  def downsweep(input: Array[Float], output: Array[Float], startingAngle: Float,
-    tree: Tree): Unit = {
+  def downsweep(input: Array[Float], output: Array[Float],
+                startingAngle: Float, tree: Tree): Unit = {
     tree match {
       case Leaf(from, until, _) =>
         downsweepSequential(input, output, startingAngle, from, until)
       case Node(left, right) =>
         parallel(
           downsweep(input, output, startingAngle, left),
-          downsweep(input, output, startingAngle, right)
+          downsweep(input, output, left.maxPrevious, right)
         )
     }
   }
 
   /** Compute the line-of-sight in parallel. */
   def parLineOfSight(input: Array[Float], output: Array[Float], threshold: Int): Unit = {
-    output(0) = 0
-    downsweep(input, output, 0,
+    downsweep(input, output, 1,
       upsweep(input, 1, input.length, threshold)
     )
   }
