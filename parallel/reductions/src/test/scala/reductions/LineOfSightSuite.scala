@@ -17,6 +17,12 @@ class LineOfSightSuite extends FunSuite {
     assert(output.toList == List(0f, 1f, 4f, 4f))
   }
 
+  test("lineOfSight should correctly handle an array of size 5") {
+    val output = new Array[Float](5)
+    lineOfSight(Array[Float](0f, 1f, 8f, 9f, 11f), output)
+    assert(output.toList == List(0f, 1f, 4f, 4f, 4f))
+  }
+
 
   test("upsweepSequential should correctly handle the chunk 1 until 4 of an array of 4 elements") {
     val res = upsweepSequential(Array[Float](0f, 1f, 8f, 9f), 1, 4)
