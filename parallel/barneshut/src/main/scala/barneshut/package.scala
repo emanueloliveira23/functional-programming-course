@@ -144,9 +144,20 @@ package object barneshut {
           // no force
         case Leaf(_, _, _, bodies) =>
           // add force contribution of each body by calling addForce
+          bodies.foreach(b => addForce(b.mass, b.x, b.y))
         case Fork(nw, ne, sw, se) =>
           // see if node is far enough from the body,
           // or recursion is needed
+          val dist = distance(quad.centerX, quad.centerY, x, y)
+          val isSingle = quad.size / dist < theta
+          if (isSingle) {
+            addForce(quad.mass, quad.massX, quad.massY)
+          } else {
+            addForce(nw.mass, nw.massX, nw.massY)
+            addForce(ne.mass, ne.massX, ne.massY)
+            addForce(sw.mass, sw.massX, sw.massY)
+            addForce(se.mass, se.massX, se.massY)
+          }
       }
 
       traverse(quad)
@@ -168,8 +179,13 @@ package object barneshut {
     val matrix = new Array[ConcBuffer[Body]](sectorPrecision * sectorPrecision)
     for (i <- 0 until matrix.length) matrix(i) = new ConcBuffer
 
+    private def fit(min: Float, max: Float, value: Float) =
+      math.floor( math.abs( math.max(min, math.min(max, value)) / sectorSize ) ).toInt
+
     def +=(b: Body): SectorMatrix = {
-      ???
+      val bx = fit(boundaries.minX, boundaries.maxX, b.x);
+      val by = fit(boundaries.minY, boundaries.maxY, b.y);
+      apply(bx, by) += b
       this
     }
 
