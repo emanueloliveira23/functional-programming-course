@@ -112,6 +112,37 @@ import FloatOps._
     assert(res, s"Body not found in the right sector")
   }
 
+  // test cases for simulator
+
+  test("computeBoundaries should render a perfect square") {
+    val nw = new Body(0, 0, 0, 0, 0)
+    val ne = new Body(0, 5, 0, 0, 0)
+    val sw = new Body(0, 0, 5, 0, 0)
+    val se = new Body(0, 5, 5, 0, 0)
+    val simModel = new SimulationModel
+    val sim = new Simulator(simModel.taskSupport, simModel.timeStats)
+    val square = new Boundaries
+    square.minX = 0
+    square.minY = 0
+    square.maxX = 5
+    square.maxY = 5
+    assert(sim.computeBoundaries(Seq(nw, ne, sw, se)) samething square)
+  }
+
+  test("computeSectorMatrix should merge two sector matrix and have equivalent size") {
+    val boundaries = new Boundaries()
+    boundaries.minX = 1
+    boundaries.minY = 1
+    boundaries.maxX = 97
+    boundaries.maxY = 97
+    val bodyA = new Body(5, 25, 47, 0.1f, 0.1f)
+    val bodyB = new Body(5, 50, 12, 0.1f, 0.1f)
+    val simModel = new SimulationModel
+    val sim = new Simulator(simModel.taskSupport, simModel.timeStats)
+    val resSm = sim.computeSectorMatrix(Seq(bodyA, bodyB), boundaries)
+    assert(resSm.matrix.flatMap(identity).size == 2)
+  }
+
 }
 
 object FloatOps {
@@ -136,6 +167,15 @@ object FloatOps {
         self.zip(that).forall { case (a, b) =>
           abs(a - b) < precisionThreshold
         }
+  }
+
+  implicit class BoundariesOps(val self: Boundaries) extends AnyRef {
+    def samething(that: Boundaries): Boolean = {
+      self.minX == that.minX &&
+      self.maxX == that.maxX &&
+      self.minY == that.minY &&
+      self.maxY == that.maxY
+    }
   }
 }
 
