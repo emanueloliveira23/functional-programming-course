@@ -1,6 +1,7 @@
 package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel}
+import org.apache.commons.math3.util.FastMath._
 
 /**
   * 2nd milestone: basic visualization
@@ -8,13 +9,15 @@ import com.sksamuel.scrimage.{Image, Pixel}
 object Visualization {
 
   val EarthRadius = 6371.8
+  val DistancePower = 6.0
+
+  // Image propose to this class
   val LongitudinalDim = 180
   val LatitudinalDim = 90
-  val DistancePower = 2.0
   val ImageWidth = 360
   val ImageHeight = 180
-  val ImageCenterX = math.floor(ImageWidth / 2).toInt
-  val ImageCenterY = math.floor(ImageHeight / 2).toInt
+  val ImageCenterX = floor(ImageWidth / 2).toInt
+  val ImageCenterY = floor(ImageHeight / 2).toInt
 
   /**
     * @param temperatures Known temperatures: pairs containing a location and the temperature at this location
@@ -87,9 +90,9 @@ object Visualization {
       val (bTemp, bColor) = higher.head
       val ratio = (value - aTemp) / (bTemp - aTemp)
       Color(
-        math.round(aColor.red + (bColor.red - aColor.red) * ratio).toInt,
-        math.round(aColor.green + (bColor.green - aColor.green) * ratio).toInt,
-        math.round(aColor.blue + (bColor.blue - aColor.blue) * ratio).toInt
+        round(aColor.red + (bColor.red - aColor.red) * ratio).toInt,
+        round(aColor.green + (bColor.green - aColor.green) * ratio).toInt,
+        round(aColor.blue + (bColor.blue - aColor.blue) * ratio).toInt
       )
     }
 
@@ -141,18 +144,18 @@ object Visualization {
       if (a == b) {
         0
       } else if (isAntipodes(a, b)) {
-        math.Pi
+        PI
       } else {
-        val aLat = math.toRadians(a.lat)
-        val aLon = math.toRadians(a.lon)
-        val bLat = math.toRadians(b.lat)
-        val bLon = math.toRadians(b.lon)
-        val aLatSin = math.sin(aLat)
-        val bLatSin = math.sin(bLat)
-        val aLatCos = math.cos(aLat)
-        val bLatCos = math.cos(bLat)
-        val abLonCos = math.cos( math.abs( aLon - bLon ) )
-        math.acos(aLatSin * bLatSin + aLatCos * bLatCos * abLonCos)
+        val aLat = toRadians(a.lat)
+        val aLon = toRadians(a.lon)
+        val bLat = toRadians(b.lat)
+        val bLon = toRadians(b.lon)
+        val aLatSin = sin(aLat)
+        val bLatSin = sin(bLat)
+        val aLatCos = cos(aLat)
+        val bLatCos = cos(bLat)
+        val abLonCos = cos( abs( aLon - bLon ) )
+        acos(aLatSin * bLatSin + aLatCos * bLatCos * abLonCos)
       }
     }
 
@@ -160,7 +163,7 @@ object Visualization {
   }
 
   def weight(distance: Double): Double =
-    1d / math.pow(distance, DistancePower)
+    1d / pow(distance, DistancePower)
 
   def isZero(distance: Double): Boolean =
     distance < 1d

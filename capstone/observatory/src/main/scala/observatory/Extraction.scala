@@ -9,6 +9,8 @@ import scala.io.Source
   */
 object Extraction {
 
+  val FileReaderChunkSize = 4096
+
   /**
     * @param year             Year number
     * @param stationsFile     Path of the stations resource file to use (e.g. "/stations.csv")
@@ -16,19 +18,22 @@ object Extraction {
     * @return A sequence containing triplets (date, location, temperature)
     */
   def locateTemperatures(year: Year, stationsFile: String, temperaturesFile: String): Iterable[(LocalDate, Location, Temperature)] = {
+    val stations = readCSVLines(stationsFile).par
+      .filter(validStationLine)
+      .map(toStationTuple)
 
-    val stations = readCSVLines(stationsFile).filter(validStationLine).map(toStationTuple)
-    val temperatures = readCSVLines(temperaturesFile).map(toTemperatureTuple(year))
+    val temperatures = readCSVLines(temperaturesFile).par
+      .map(toTemperatureTuple(year))
 
-    val temperatureGroups = temperatures.toIterable.groupBy(_._1)
+    val temperaturesGroups = temperatures.groupBy(_._1)
 
     stations.flatMap { case (stationId, location) =>
-      temperatureGroups
-        .getOrElse(stationId, Iterable.empty[TemperatureTuple])
-        .map{ case (_, date, temperature) =>
+      temperaturesGroups
+        .getOrElse(stationId, Iterable.empty)
+        .map { case(_, date, temperature) =>
           (date, location, temperature)
         }
-    }.toIterable
+    }.seq
   }
 
   /**
@@ -37,12 +42,13 @@ object Extraction {
     */
   def locationYearlyAverageRecords(records: Iterable[(LocalDate, Location, Temperature)]): Iterable[(Location, Temperature)] = {
     records
+      .par
       .map(entry => (entry._2, entry._3))
       .groupBy(_._1)
       .map { case (location, entries) =>
         val avg = entries.map(_._2).sum / entries.size
         (location, avg)
-      }
+      }.seq
   }
 
   // Utils
@@ -63,7 +69,10 @@ object Extraction {
   def readCSVLines(source: String) =
     Source.fromInputStream(
       getClass.getResourceAsStream(source)
-    ).getLines().map(readCsvLine)
+    )
+    .getLines()
+    .map(readCsvLine)
+    .toSeq
 
   def readCsvLine(line: String) =
     line.split(",", -1).map(_.trim)
@@ -98,6 +107,6 @@ object Extraction {
     (cols.head /* Id1 */, cols(Id2))
 
   def fahrenheitToCelsius(fTemp: Double) =
-    (fTemp - 32) * 5/9
+    (fTemp - 32.0) * 5.0/9.0
 
 }
