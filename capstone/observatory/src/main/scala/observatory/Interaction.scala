@@ -43,12 +43,8 @@ object Interaction {
     * @param tile Tile coordinates
     * @return The latitude and longitude of the top-left corner of the tile, as per http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
     */
-  def tileLocation(tile: Tile): Location = {
-    val n = pow(2d, tile.zoom)
-    val lon = ((tile.x.toDouble / n) % 1.0) * 360d - 180d
-    val lat = ((atan(sinh(PI * (1.0 - 2.0 * tile.y / n))).toDegrees + 90) % 180.0) - 90
-    Location(lat, lon)
-  }
+  def tileLocation(tile: Tile): Location =
+    tile.location
 
   /**
     * @param temperatures Known temperatures
@@ -115,7 +111,11 @@ object Interaction {
 
   def imageGenerator(year: Year, t: Tile, data: Iterable[(Location, Temperature)]): Unit = {
     val image = tile(data, ColorScale, t)
-    val path = tilePath(year, t)
+    saveImageTile(image, year, t)
+  }
+
+  def saveImageTile(image: Image, year: Year, tile: Tile): Unit = {
+    val path = tilePath(year, tile)
     val imageFile = new File(path)
 
     // create files

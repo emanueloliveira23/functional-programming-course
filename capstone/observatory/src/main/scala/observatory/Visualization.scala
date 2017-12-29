@@ -26,49 +26,43 @@ object Visualization {
     */
   def predictTemperature(temperatures: Iterable[(Location, Temperature)], location: Location): Temperature = {
 
-    // from: https://en.wikipedia.org/wiki/Inverse_distance_weighting#Basic_form
-    val result = temperatures
+    val predictions: Iterable[(Double, Double)] = distanceTemperatureCombi(temperatures, location)
 
-      // init phase:
-      // turn in a parallel collection
-      .toSeq.par
-
-      // map phase:
-      // map each example to distance from location argument and temperature
-      .map { case (loc, temperature) =>
-        ( distance(loc, location), temperature )
-      }
-
-      // reduce phase:
-      // start with the accumulator tuple (numerator, divisor, found zero distance flag)
-      // for each example do:
-      // if already found a zero distance, return the temperature tuple: (temperature of zero distance, 0, true)
-      // if current distance is zero, return (current temperature, 0, true)
-      // else return "happy day" tuple: (numerator plus temp. times dist., divider plus distance, false)
-      .foldLeft((0.0, 0.0, false)) { case (acc, tuple) =>
-        val ( numerator, divider, foundZeroD ) = acc
-        if (foundZeroD) acc
-        else {
-          val ( distance, temperature ) = tuple
-          if (isZero(distance)) {
-            (temperature, 0.0, true)
-          } else {
-            val distanceWeight = weight(distance)
-            ( numerator +  distanceWeight * temperature,
-              divider + distanceWeight,
-              false )
-          }
-        }
-      }
-
-    // finally, check result
-    // if "happy day" tuple, return the division
-    // if temperature tuple: return it.
-    result match {
-      case (numerator, divider, false) => numerator / divider
-      case (temperature, _, true) => temperature
+    predictions.find(t => isZero(t._1)) match {
+      case Some((_, temp)) => temp
+      case _ => inverseDistanceWeighted(predictions, power = 3)
     }
   }
+
+  def distanceTemperatureCombi(temperatures: Iterable[(Location, Double)], location: Location): Iterable[(Double, Double)] = {
+    temperatures.map {
+      case (otherLocation, temperature) => (distance(location, otherLocation), temperature)
+    }
+  }
+
+  /**
+    * https://en.wikipedia.org/wiki/Inverse_distance_weighting
+    *
+    * @param distanceTemperatureCombinations
+    * @param power
+    * @return
+    */
+  def inverseDistanceWeighted(distanceTemperatureCombinations: Iterable[(Double, Double)], power: Int): Double = {
+    val (weightedSum, inverseWeightedSum) = distanceTemperatureCombinations
+      .aggregate((0.0, 0.0))(
+        {
+          case ((ws, iws), (distance, temp)) => {
+            val w = 1 / pow(distance, power)
+            (w * temp + ws, w + iws)
+          }
+        }, {
+          case ((wsA, iwsA), (wsB, iwsB)) => (wsA + wsB, iwsA + iwsB)
+        }
+      )
+
+    weightedSum / inverseWeightedSum
+  }
+
 
   /**
     * @param points Pairs containing a value and its associated color
@@ -161,9 +155,6 @@ object Visualization {
 
     EarthRadius * delta
   }
-
-  def weight(distance: Double): Double =
-    1d / pow(distance, DistancePower)
 
   def isZero(distance: Double): Boolean =
     distance < 1d
